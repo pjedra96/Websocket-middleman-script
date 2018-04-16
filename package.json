@@ -1,0 +1,20 @@
+{
+  "name": "nodered",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "No specified test script",
+    "start": "node index.js"
+  },
+  "author": "P. Jedra",
+  "license": "ISC",
+  "dependencies": {
+    "forever": "^0.15.3",
+    "fs": "0.0.1-security",
+    "https": "^1.0.0",
+    "tls": "0.0.1",
+    "websocket": "^1.0.25",
+    "wss": "^3.0.2"
+  }
+}
