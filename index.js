@@ -4,18 +4,63 @@ const https = require('https');
 const forever = require('forever');
 const {createServerFrom} = require('wss');
 const WebSocket = require('ws');
-let web_client = new WebSocket('ws://................');
+let web_client = new WebSocket('ws://185.34.81.81:48880/ws/myapp');
+let historicReplay = new WebSocket('ws://35.177.34.53:1880/ws/Playback');
 
 let options = {
-   key  : fs.readFileSync('./license.key'), // Import the encryption license .key file
-   cert : fs.readFileSync('./encrptionfile.chained.crt') // Import the encryption certificate .chained.crt file
+   key  : fs.readFileSync('./ssl_cert/urbansensingltd.com.key'),
+   cert : fs.readFileSync('./ssl_cert/urbansensingltd.com.chained.crt')
 };
 
-web_client.on('open', () =>{ console.log('Node-Red connection set up');});
+function connectRealTime() {
+  web_client = new WebSocket('ws://185.34.81.81:48880/ws/myapp');
+  web_client.onopen = function() {
+    console.log('Connection with real time broker set up');
+    setTimeout(() => {
+      web_client.close();
+    }, 1000*60*30); // Close the connection automatically after 30 minutes
+  };
+  web_client.onclose = function() {
+    console.log('Real time socket closed. Reconnect will be attempted');
+    connectRealTime(); // When connection closed re-connect with the real time data broker
+  };
+  web_client.onerror = function(err) {
+    console.error('Real time socket encountered error: ', err.message, ' Closing socket');
+    web_client.close();
+  };
+}
+
+function connectHistoricReplay() {
+  historicReplay = new WebSocket('ws://35.177.34.53:1880/ws/Playback');
+  historicReplay.onopen = function() {
+    console.log('Connection with historic replay broker set up');
+    setTimeout(() => {
+      historicReplay.close();
+    }, 1000*60*30); // Close the connection automatically after 30 minutes
+  };
+  historicReplay.onclose = function() {
+    console.log('Historic Replay socket closed. Reconnect will be attempted');
+    connectHistoricReplay(); // When connection closed re-connect with the historic replay broker
+  };
+  historicReplay.onerror = function(err) {
+    console.error('Historic socket encountered error: ', err.message, ' Closing socket');
+    historicReplay.close();
+  };
+}
+
+// Set up an initial connection with the real time broker and historic broker
+connectRealTime();
+connectHistoricReplay();
+
+/*web_client.on('open', () =>{ console.log('Node-Red connection set up');});
 web_client.on('close', () => { console.log('Node-Red connection stopped');});
 web_client.on('error', err =>{ console.error(err);});
+historicReplay.on('open', () => { console.log('Historic replay node-red connection set up');});
+historicReplay.on('close', () => { console.log('Historic replay connection stopped');});
+historicReplay.on('error', err => { console.log(err);});*/
 
 let httpsServer = https.createServer(options);
+let httpsServer2 = https.createServer(options);
 
 createServerFrom(httpsServer, function connectionListener (wss) {  	
   web_client.on('message', (message) => {
@@ -27,12 +72,10 @@ createServerFrom(httpsServer, function connectionListener (wss) {
 
   wss.on('open', () => {
     console.log('Successfully opened connection');
-    start_client();
   });
 
   wss.on("connection", (ws) => {
     console.log('Successfully opened connection (port 8080) with the client');
-    start_client();
   });
 
   wss.on('message', (data) => {
@@ -52,8 +95,41 @@ createServerFrom(httpsServer, function connectionListener (wss) {
 	console.log('listening on wss:// & https://%s:%d', /::/.test(address) ? '0.0.0.0' : address, port);
 });
 
-// Restart the whole server process every 1 hour
-setTimeout(() => {
+createServerFrom(httpsServer2, function connectionListener (wsss) {   
+  historicReplay.on('message', (msg) => {
+    console.log(msg);
+    if(wsss.readyState == wsss.OPEN){
+      wsss.send(msg);
+    }
+  });
+
+  wsss.on('open', () => {
+    console.log('Successfully opened connection');
+  });
+
+  wsss.on("connection", (ws) => {
+    console.log('Successfully opened connection (port 8081) with the client');
+  });
+
+  wsss.on('message', (data) => {
+    console.log(data);
+    historicReplay.send(data);
+  });
+
+  wsss.on('close', () => {
+    console.log('Wss connection closed');
+  });
+
+  wsss.on('error', (err) => {
+    console.log(err);
+  });
+
+}).listen(8081, function(){
+    const {address, port} = this.address(); // this is the http[s].Server 
+  console.log('listening on wss:// & https://%s:%d', /::/.test(address) ? '0.0.0.0' : address, port);
+});
+
+/*setTimeout(() => {
     process.on("exit", function () {
         require("child_process").spawn(process.argv.shift(), process.argv, {
             cwd: process.cwd(),
@@ -62,4 +138,4 @@ setTimeout(() => {
         });
     });
     process.exit();
-}, 1000*60*30); // NEW restart the server process every 30 mins
+}, 1000*60*30);*/ // restart the server process every 30 mins
