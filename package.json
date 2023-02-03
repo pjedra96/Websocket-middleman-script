@@ -1,7 +1,7 @@
 {
-  "name": "nodered",
-  "version": "1.0.0",
-  "description": "",
+  "name": "ws_to_wss",
+  "version": "2.0.0",
+  "description": "This script allows communication between the websocket broker and a website that uses both the http and https protocol - secure and insecure website",
   "main": "index.js",
   "scripts": {
     "test": "No specified test script",
