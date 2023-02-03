@@ -4,8 +4,8 @@ const https = require('https');
 const forever = require('forever');
 const {createServerFrom} = require('wss');
 const WebSocket = require('ws');
-let web_client = new WebSocket('ws://185.34.81.81:48880/ws/myapp');
-let historicReplay = new WebSocket('ws://35.177.34.53:1880/ws/Playback');
+let web_client = new WebSocket('ws://3.8.43.221:1880/ws/myapp'); // local-original connection ws://185.34.81.81:48880/ws/myapp
+let historicReplay = new WebSocket('ws://3.8.43.221:1880/ws/Playback'); // 185.34.81.81:48880/ws/Playback
 
 let options = {
    key  : fs.readFileSync('./ssl_cert/urbansensingltd.com.key'),
@@ -13,7 +13,7 @@ let options = {
 };
 
 function connectRealTime() {
-  web_client = new WebSocket('ws://185.34.81.81:48880/ws/myapp');
+  web_client = new WebSocket('ws://3.8.43.221:1880/ws/myapp'); // local-original connection ws://185.34.81.81:48880/ws/myapp
   web_client.onopen = function() {
     console.log('Connection with real time broker set up');
     setTimeout(() => {
@@ -31,7 +31,7 @@ function connectRealTime() {
 }
 
 function connectHistoricReplay() {
-  historicReplay = new WebSocket('ws://35.177.34.53:1880/ws/Playback');
+  historicReplay = new WebSocket('ws://3.8.43.221:1880/ws/Playback'); // 185.34.81.81:48880/ws/Playback
   historicReplay.onopen = function() {
     console.log('Connection with historic replay broker set up');
     setTimeout(() => {
@@ -64,7 +64,6 @@ let httpsServer2 = https.createServer(options);
 
 createServerFrom(httpsServer, function connectionListener (wss) {  	
   web_client.on('message', (message) => {
-		console.log(message);
 		if(wss.readyState == wss.OPEN){
 			wss.send(message);
 		}
@@ -97,7 +96,6 @@ createServerFrom(httpsServer, function connectionListener (wss) {
 
 createServerFrom(httpsServer2, function connectionListener (wsss) {   
   historicReplay.on('message', (msg) => {
-    console.log(msg);
     if(wsss.readyState == wsss.OPEN){
       wsss.send(msg);
     }
@@ -112,7 +110,6 @@ createServerFrom(httpsServer2, function connectionListener (wsss) {
   });
 
   wsss.on('message', (data) => {
-    console.log(data);
     historicReplay.send(data);
   });
 
